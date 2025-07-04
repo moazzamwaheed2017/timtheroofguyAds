@@ -110,9 +110,17 @@
     }
 
     function loadDashboardData(timePeriod) {
-      fetch(`https://n8n.kingcaller.ai/webhook/dashboard-data?time_period=${timePeriod}`)
-        .then(response => response.json())
+      console.log(`Fetching data for time period: ${timePeriod}`);
+      fetch(`https://n8n.kingcaller.ai/webhook/dashboard-data?time_period=${timePeriod}`, {
+        method: 'GET',
+        mode: 'cors'
+      })
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          return response.json();
+        })
         .then(data => {
+          console.log("API Response:", data);
           const dashboardData = data[0]?.json || {};
           const leadData = dashboardData.leadData || { totalLeads: 0, totalBooked: 0, averageDealSize: 20000 };
           const adsData = dashboardData.adsData || { spend: 0, impressions: 0 };
@@ -129,10 +137,7 @@
           const totalBookedValue = totalBooked * averageDealSize;
           const totalPipelineValue = totalLeadValue + totalBookedValue;
 
-          // Update Dashboard Title
           document.getElementById("dashboardTitle").innerText = `📊 ${dashboardData.dashboardTitle || 'Tim The Roof Guy Ads Dashboard'} (${timePeriod === '30d' ? 'Last 30 Days' : 'All Time'})`;
-
-          // Update Stat Cards
           document.getElementById("totalSpend").innerText = `$${spend.toFixed(2)}`;
           document.getElementById("totalImpressions").innerText = impressions.toLocaleString();
           document.getElementById("dailyAverageSpend").innerText = `$${dailyAverageSpend.toFixed(2)}`;
@@ -143,7 +148,6 @@
           document.getElementById("totalBookedValue").innerText = `$${totalBookedValue.toFixed(2)}`;
           document.getElementById("totalPipelineValue").innerText = `$${totalPipelineValue.toFixed(2)}`;
 
-          // Update Lead Details Table
           const tableBody = document.getElementById("leadDetailsTableBody");
           tableBody.innerHTML = "";
           if (leadDetails.length === 0) {
@@ -165,53 +169,33 @@
             });
           }
 
-          // Destroy existing charts to prevent duplication
           destroyCharts();
 
-          // Monthly Spend Chart
           monthlySpendChart = new Chart(document.getElementById('monthlySpendChart'), {
             type: 'bar',
             data: {
               labels: [timePeriod === '30d' ? 'Last 30 Days' : 'All Time'],
-              datasets: [{
-                label: 'Spend',
-                data: [spend],
-                backgroundColor: '#3B82F6'
-              }]
+              datasets: [{ label: 'Spend', data: [spend], backgroundColor: '#3B82F6' }]
             },
             options: { scales: { y: { beginAtZero: true } } }
           });
 
-          // Cost Metrics Chart
           costMetricsChart = new Chart(document.getElementById('costMetricsChart'), {
             type: 'bar',
             data: {
               labels: ['Cost per Lead', 'Cost per Appointment'],
-              datasets: [{
-                label: 'USD',
-                data: [totalLeads > 0 ? spend / totalLeads : 0, totalBooked > 0 ? spend / totalBooked : 0],
-                backgroundColor: ['#A78BFA', '#F472B6']
-              }]
+              datasets: [{ label: 'USD', data: [totalLeads > 0 ? spend / totalLeads : 0, totalBooked > 0 ? spend / totalBooked : 0], backgroundColor: ['#A78BFA', '#F472B6'] }]
             },
             options: { scales: { y: { beginAtZero: true } } }
           });
 
-          // Leads & Appointments Chart
           leadsAppointmentsChart = new Chart(document.getElementById('leadsAppointmentsChart'), {
             type: 'bar',
             data: {
               labels: [timePeriod === '30d' ? 'Last 30 Days' : 'All Time'],
               datasets: [
-                {
-                  label: 'Leads',
-                  data: [totalLeads],
-                  backgroundColor: '#A78BFA'
-                },
-                {
-                  label: 'Appointments',
-                  data: [totalBooked],
-                  backgroundColor: '#F472B6'
-                }
+                { label: 'Leads', data: [totalLeads], backgroundColor: '#A78BFA' },
+                { label: 'Appointments', data: [totalBooked], backgroundColor: '#F472B6' }
               ]
             },
             options: { scales: { y: { beginAtZero: true } } }
@@ -220,13 +204,11 @@
         .catch(error => console.error('Error loading dashboard data:', error));
     }
 
-    // Load data on page load
     document.addEventListener("DOMContentLoaded", () => {
       const timePeriod = document.getElementById("timePeriod").value;
       loadDashboardData(timePeriod);
     });
 
-    // Reload data on time period change
     document.getElementById("timePeriod").addEventListener("change", () => {
       const timePeriod = document.getElementById("timePeriod").value;
       loadDashboardData(timePeriod);
